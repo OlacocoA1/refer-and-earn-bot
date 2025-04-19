@@ -1,31 +1,14 @@
-import logging
 import sqlite3
 import requests
-from telegram import (
-    Update,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    ReplyKeyboardMarkup,
-    KeyboardButton
-)
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    ContextTypes,
-    CallbackQueryHandler,
-    MessageHandler,
-    filters
-)
+from flask import Flask, render_template, request, redirect, url_for, session
 
-# === CONFIGURATION ===
-BOT_TOKEN = "7373949725:AAEh73YVcSeE2R0Cyp0Y3yuYci38dOx9-2Y"
+app = Flask(__name__)
+app.secret_key = "your_secret_key"  # Use a secret key for session management
+
 PAYSTACK_KEY = "pk_live_b5fa4e730d9baa38f7ff012ad4d263d5d3459c5b"
-BOT_USERNAME = "ReferGenieBot"  # exact Telegram username (with Bot suffix)
+BOT_USERNAME = "ReferGenieBot"
 
-# === LOGGING ===
-logging.basicConfig(level=logging.INFO)
-
-# === DATABASE CONNECTION ===
+# Initialize SQLite database
 def init_db():
     conn = sqlite3.connect("refergenie.db")
     cursor = conn.cursor()
@@ -42,148 +25,85 @@ def init_db():
     conn.commit()
     conn.close()
 
-# === MAIN MENU KEYBOARD ===
-def main_menu():
-    return ReplyKeyboardMarkup([
-        [KeyboardButton("💰 Check Balance"), KeyboardButton("👥 Get Referral Link")],
-        [KeyboardButton("💵 Withdraw")]
-    ], resize_keyboard=True)
+# === Home Page ===
+@app.route('/')
+def home():
+    user_id = session.get("user_id")
+    if user_id:
+        conn = sqlite3.connect("refergenie.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT paid FROM users WHERE user_id=?", (user_id,))
+        paid = cursor.fetchone()
+        conn.close()
 
-# === /start COMMAND ===
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    user_id = user.id
-    username = user.username or f"user{user_id}"
-    
-    # Connect to DB and check if the user already exists
-    conn = sqlite3.connect("refergenie.db")
-    cursor = conn.cursor()
-    
-    cursor.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
-    user_exists = cursor.fetchone()
+        if paid and paid[0] == 0:  # If not paid
+            return redirect(url_for('pay'))
+        else:
+            return render_template('dashboard.html')
 
-    if not user_exists:
-        cursor.execute("INSERT INTO users (user_id, username) VALUES (?, ?)", (user_id, username))
-        conn.commit()
-    
-    # Handle referral if link has start arg
-    if context.args:
-        referrer = int(context.args[0])
-        if referrer != user_id:
-            cursor.execute("UPDATE users SET referrer_id = ? WHERE user_id = ?", (referrer, user_id))
-            cursor.execute("UPDATE users SET balance = balance + 300 WHERE user_id = ?", (referrer,))
-            conn.commit()
+    return render_template('index.html')
 
-    conn.close()
-    
-    # Check if user has paid
-    conn = sqlite3.connect("refergenie.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT paid FROM users WHERE user_id=?", (user_id,))
-    paid = cursor.fetchone()
-
-    if paid and paid[0] == 0:  # If not paid
-        keyboard = [[InlineKeyboardButton("💳 Pay ₦1000 to Join", callback_data="pay")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(
-            "👋 Welcome to *ReferGenie!*\n\n"
-            "Pay ₦1000 to activate your account and start earning ₦300 per referral.",
-            reply_markup=reply_markup,
-            parse_mode="Markdown"
-        )
-    else:
-        # If paid, show the main menu
-        await update.message.reply_text("👇 Use the menu below to access other features.", reply_markup=main_menu())
-
-    conn.close()
-
-# === INLINE BUTTON HANDLER ===
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    user_id = query.from_user.id
-    username = query.from_user.username or f"user{user_id}"
-
-    payload = {
-        "email": f"{username}@gmail.com",  # use email or any unique identifier
-        "amount": 100000,  # ₦1000 is 1000 kobo
-        "metadata": {"user_id": user_id},
-        "callback_url": "https://yourwebsite.com/callback"  # Optional: A URL where Paystack can send info after payment
-    }
-
-    headers = {
-        "Authorization": f"Bearer {PAYSTACK_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    try:
-        # Make a POST request to Paystack API
+# === Paystack Payment Page ===
+@app.route('/pay', methods=['GET', 'POST'])
+def pay():
+    user_id = session.get("user_id")
+    if request.method == 'POST':
+        username = request.form.get("username")
+        # Initialize the Paystack payment link
+        payload = {
+            "email": f"{username}@gmail.com",
+            "amount": 100000,  # ₦1000 is 1000 kobo
+            "metadata": {"user_id": user_id},
+            "callback_url": "https://yourwebsite.com/callback"
+        }
+        headers = {
+            "Authorization": f"Bearer {PAYSTACK_KEY}",
+            "Content-Type": "application/json"
+        }
         res = requests.post("https://api.paystack.co/transaction/initialize", headers=headers, json=payload)
         data = res.json()
 
         if data.get("status"):
             payment_url = data["data"]["authorization_url"]
-            # Send the payment link to the user
-            await query.message.reply_text(f"💳 Click below to pay ₦1000:\n{payment_url}")
+            return redirect(payment_url)
         else:
-            await query.message.reply_text(f"❌ Error: {data.get('message', 'Failed to create payment link')}")
-    except Exception as e:
-        logging.error(f"Paystack error: {e}")
-        await query.message.reply_text("⚠️ Payment failed due to server error.")
+            return "Error: Failed to generate payment link"
 
-# === COMMAND: /balance or 💰 Check Balance ===
-async def show_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    conn = sqlite3.connect("refergenie.db")
-    cursor = conn.cursor()
+    return render_template('pay.html')
 
-    cursor.execute("SELECT balance FROM users WHERE user_id=?", (user_id,))
-    balance = cursor.fetchone()
-
-    conn.close()
-
-    if balance:
-        await update.message.reply_text(f"💰 Your balance: ₦{balance[0]}")
-    else:
-        await update.message.reply_text("❌ You are not registered yet. Please try again later.")
-
-# === COMMAND: /refer or 👥 Get Referral Link ===
-async def referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
-    await update.message.reply_text(f"🔗 Your referral link:\n{link}")
-
-# === COMMAND: /withdraw or 💵 Withdraw ===
-async def withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    conn = sqlite3.connect("refergenie.db")
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT balance FROM users WHERE user_id=?", (user_id,))
-    balance = cursor.fetchone()
-
-    if balance and balance[0] >= 1000:
-        cursor.execute("UPDATE users SET balance = balance - 1000 WHERE user_id=?", (user_id,))
+# === Callback for Paystack ===
+@app.route('/callback', methods=['GET'])
+def callback():
+    user_id = session.get("user_id")
+    # Assuming Paystack sends data back to this endpoint upon successful payment
+    if user_id:
+        conn = sqlite3.connect("refergenie.db")
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET paid = 1 WHERE user_id=?", (user_id,))
         conn.commit()
-        await update.message.reply_text("✅ Withdrawal successful! ₦1000 has been deducted.")
-    else:
-        await update.message.reply_text("❌ Insufficient balance. You need at least ₦1000 to withdraw.")
+        conn.close()
+        return redirect(url_for('home'))
 
-    conn.close()
+    return "Error: User ID not found"
 
-# === MAIN BOT SETUP ===
-def main():
-    application = ApplicationBuilder().token(BOT_TOKEN).build()
+# === User Registration (Temporary for this demo) ===
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get("username")
+        user_id = request.form.get("user_id")  # This would be dynamically handled in a real system
+        conn = sqlite3.connect("refergenie.db")
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO users (user_id, username) VALUES (?, ?)", (user_id, username))
+        conn.commit()
+        conn.close()
 
-    init_db()
+        session['user_id'] = user_id
+        return redirect(url_for('home'))
+    
+    return render_template('register.html')
 
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("balance", show_balance))
-    application.add_handler(CommandHandler("refer", referral))
-    application.add_handler(CommandHandler("withdraw", withdraw))
-    application.add_handler(CallbackQueryHandler(button_handler))
-
-    application.run_polling()
-
+# === Main ===
 if __name__ == "__main__":
-    main()
+    init_db()
+    app.run(debug=True)
