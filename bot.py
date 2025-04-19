@@ -2,7 +2,7 @@ import logging
 import os
 import requests
 from telegram import Bot, Update
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackContext
 from telegram.ext import MessageHandler, filters
 from telegram.ext import Updater
 import json
@@ -101,10 +101,11 @@ def verify_paystack_transaction(transaction_reference: str) -> bool:
     return False
 
 def main() -> None:
-    updater = Updater(TOKEN)
+    application = ApplicationBuilder().token(TOKEN).build()
+
 
     # Register handlers for commands
-    dp = updater.dispatcher
+    dp = application.add_handler
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("balance", balance))
     dp.add_handler(CommandHandler("refer", refer))
@@ -112,7 +113,8 @@ def main() -> None:
     dp.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, process_payment))
 
     # Start the bot
-    updater.start_polling()
+    application.run_polling()
+
     updater.idle()
 
 if __name__ == '__main__':
