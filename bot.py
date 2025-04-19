@@ -1,9 +1,10 @@
 import sqlite3
+import os
 import requests
 from flask import Flask, render_template, request, redirect, url_for, session
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key"  # Use a secret key for session management
+app.secret_key = os.urandom(24)  # Use a secret key for session management
 
 PAYSTACK_KEY = "pk_live_b5fa4e730d9baa38f7ff012ad4d263d5d3459c5b"
 BOT_USERNAME = "ReferGenieBot"
@@ -105,5 +106,5 @@ def register():
 
 # === Main ===
 if __name__ == "__main__":
+    init_db()  # Ensure the database is initialized
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-
