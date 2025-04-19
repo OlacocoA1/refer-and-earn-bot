@@ -109,7 +109,7 @@ def main() -> None:
     dp.add_handler(CommandHandler("balance", balance))
     dp.add_handler(CommandHandler("refer", refer))
     dp.add_handler(CommandHandler("withdraw", withdraw))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, process_payment))
+    dp.add_handler(MessageHandler(filters.TEXT & ~filters.command, process_payment))
 
     # Start the bot
     updater.start_polling()
