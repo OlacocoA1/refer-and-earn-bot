@@ -35,6 +35,7 @@ def init_db():
             username TEXT,
             balance INTEGER DEFAULT 0,
             referrer_id INTEGER,
+            paid INTEGER DEFAULT 0,  -- 0 for not paid, 1 for paid
             FOREIGN KEY (referrer_id) REFERENCES users(user_id)
         )
     ''')
@@ -75,16 +76,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     conn.close()
     
-    keyboard = [[InlineKeyboardButton("💳 Pay ₦1000 to Join", callback_data="pay")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    # Check if user has paid
+    conn = sqlite3.connect("refergenie.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT paid FROM users WHERE user_id=?", (user_id,))
+    paid = cursor.fetchone()
 
-    await update.message.reply_text(
-        "👋 Welcome to *ReferGenie!*\n\n"
-        "Pay ₦1000 to activate your account and start earning ₦300 per referral.",
-        reply_markup=reply_markup,
-        parse_mode="Markdown"
-    )
-    await update.message.reply_text("👇 Use the menu below to access other features.", reply_markup=main_menu())
+    if paid and paid[0] == 0:  # If not paid
+        keyboard = [[InlineKeyboardButton("💳 Pay ₦1000 to Join", callback_data="pay")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(
+            "👋 Welcome to *ReferGenie!*\n\n"
+            "Pay ₦1000 to activate your account and start earning ₦300 per referral.",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+    else:
+        # If paid, show the main menu
+        await update.message.reply_text("👇 Use the menu below to access other features.", reply_markup=main_menu())
+
+    conn.close()
 
 # === INLINE BUTTON HANDLER ===
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -94,9 +105,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = query.from_user.username or f"user{user_id}"
 
     payload = {
-        "email": f"{username}@gmail.com",
-        "amount": 100000,  # in kobo (₦1000)
-        "metadata": {"user_id": user_id}
+        "email": f"{username}@gmail.com",  # use email or any unique identifier
+        "amount": 100000,  # ₦1000 is 1000 kobo
+        "metadata": {"user_id": user_id},
+        "callback_url": "https://yourwebsite.com/callback"  # Optional: A URL where Paystack can send info after payment
     }
 
     headers = {
@@ -105,12 +117,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
 
     try:
+        # Make a POST request to Paystack API
         res = requests.post("https://api.paystack.co/transaction/initialize", headers=headers, json=payload)
         data = res.json()
 
         if data.get("status"):
             payment_url = data["data"]["authorization_url"]
-            await query.message.reply_text(f"💳 Click below to pay:\n{payment_url}")
+            # Send the payment link to the user
+            await query.message.reply_text(f"💳 Click below to pay ₦1000:\n{payment_url}")
         else:
             await query.message.reply_text(f"❌ Error: {data.get('message', 'Failed to create payment link')}")
     except Exception as e:
@@ -149,35 +163,27 @@ async def withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
     balance = cursor.fetchone()
 
     if balance and balance[0] >= 1000:
-        cursor.execute("UPDATE users SET balance = balance - 1000 WHERE user_id = ?", (user_id,))
+        cursor.execute("UPDATE users SET balance = balance - 1000 WHERE user_id=?", (user_id,))
         conn.commit()
-        await update.message.reply_text("✅ Withdrawal of ₦1000 requested. Admin will process it shortly.")
+        await update.message.reply_text("✅ Withdrawal successful! ₦1000 has been deducted.")
     else:
-        await update.message.reply_text("❌ Minimum balance for withdrawal is ₦1000.")
+        await update.message.reply_text("❌ Insufficient balance. You need at least ₦1000 to withdraw.")
 
     conn.close()
 
-# === HANDLE BUTTONS (Text Messages from Keyboard) ===
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    if text == "💰 Check Balance":
-        await show_balance(update, context)
-    elif text == "👥 Get Referral Link":
-        await referral(update, context)
-    elif text == "💵 Withdraw":
-        await withdraw(update, context)
-    else:
-        await update.message.reply_text("❓ Unknown option. Please use the buttons below.", reply_markup=main_menu())
+# === MAIN BOT SETUP ===
+def main():
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
 
-# === MAIN ===
-if __name__ == '__main__':
-    init_db()  # Initialize the DB on startup
+    init_db()
 
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("balance", show_balance))
+    application.add_handler(CommandHandler("refer", referral))
+    application.add_handler(CommandHandler("withdraw", withdraw))
+    application.add_handler(CallbackQueryHandler(button_handler))
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_handler))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    application.run_polling()
 
-    print("✅ ReferGenie is running...")
-    app.run_polling()
+if __name__ == "__main__":
+    main()
