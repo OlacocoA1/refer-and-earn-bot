@@ -1,139 +1,183 @@
+import logging
 import sqlite3
 import requests
-from telegram import Update
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    ReplyKeyboardMarkup,
+    KeyboardButton
+)
 from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+    ApplicationBuilder,
+    CommandHandler,
+    ContextTypes,
+    CallbackQueryHandler,
+    MessageHandler,
+    filters
 )
 
-# === SETTINGS ===
+# === CONFIGURATION ===
 BOT_TOKEN = "7373949725:AAEh73YVcSeE2R0Cyp0Y3yuYci38dOx9-2Y"
-BOT_NAME = "CashFlexBot"
-JOIN_FEE = 1000
-REF_REWARD = 300
-MIN_WITHDRAW = 1000
-PAYSTACK_SECRET_KEY = "pk_live_b5fa4e730d9baa38f7ff012ad4d263d5d3459c5b"
+PAYSTACK_KEY = "pk_live_b5fa4e730d9baa38f7ff012ad4d263d5d3459c5b"
+BOT_USERNAME = "ReferGenieBot"  # exact Telegram username (with Bot suffix)
 
-# === DATABASE ===
+# === LOGGING ===
+logging.basicConfig(level=logging.INFO)
+
+# === DATABASE CONNECTION ===
 def init_db():
-    conn = sqlite3.connect("users.db")
-    c = conn.cursor()
-    c.execute("""
+    conn = sqlite3.connect("refergenie.db")
+    cursor = conn.cursor()
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
             username TEXT,
-            referred_by INTEGER,
-            balance INTEGER DEFAULT 0
+            balance INTEGER DEFAULT 0,
+            referrer_id INTEGER,
+            FOREIGN KEY (referrer_id) REFERENCES users(user_id)
         )
-    """)
+    ''')
     conn.commit()
     conn.close()
 
-def get_user(user_id):
-    conn = sqlite3.connect("users.db")
-    c = conn.cursor()
-    c.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
-    user = c.fetchone()
-    conn.close()
-    return user
+# === MAIN MENU KEYBOARD ===
+def main_menu():
+    return ReplyKeyboardMarkup([
+        [KeyboardButton("💰 Check Balance"), KeyboardButton("👥 Get Referral Link")],
+        [KeyboardButton("💵 Withdraw")]
+    ], resize_keyboard=True)
 
-def register_user(user_id, username, referred_by):
-    conn = sqlite3.connect("users.db")
-    c = conn.cursor()
-    c.execute("INSERT INTO users (user_id, username, referred_by) VALUES (?, ?, ?)",
-              (user_id, username, referred_by))
-    if referred_by:
-        c.execute("UPDATE users SET balance = balance + ? WHERE user_id=?", (REF_REWARD, referred_by))
-    conn.commit()
-    conn.close()
-
-def get_balance(user_id):
-    conn = sqlite3.connect("users.db")
-    c = conn.cursor()
-    c.execute("SELECT balance FROM users WHERE user_id=?", (user_id,))
-    row = c.fetchone()
-    conn.close()
-    return row[0] if row else 0
-
-def update_balance(user_id, amount):
-    conn = sqlite3.connect("users.db")
-    c = conn.cursor()
-    c.execute("UPDATE users SET balance = balance + ? WHERE user_id=?", (amount, user_id))
-    conn.commit()
-    conn.close()
-
-def get_ref_count(user_id):
-    conn = sqlite3.connect("users.db")
-    c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM users WHERE referred_by=?", (user_id,))
-    count = c.fetchone()[0]
-    conn.close()
-    return count
-
-# === PAYSTACK ===
-def create_paystack_link(user_id, username):
-    headers = {
-        "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "email": f"{username or 'user'}@cashflex.fake",
-        "amount": JOIN_FEE * 100,
-        "metadata": {"user_id": user_id}
-    }
-    res = requests.post("https://api.paystack.co/transaction/initialize", json=data, headers=headers)
-    if res.status_code == 200:
-        return res.json()['data']['authorization_url']
-    else:
-        return "⚠️ Error generating payment link."
-
-# === BOT COMMANDS ===
+# === /start COMMAND ===
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    ref_code = context.args[0] if context.args else None
-    existing = get_user(user.id)
+    user_id = user.id
+    username = user.username or f"user{user_id}"
+    
+    # Connect to DB and check if the user already exists
+    conn = sqlite3.connect("refergenie.db")
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
+    user_exists = cursor.fetchone()
 
-    if existing:
-        await update.message.reply_text(
-            f"👋 Welcome back to {BOT_NAME}!\nUse /balance, /refer or /withdraw."
-        )
-    else:
-        register_user(user.id, user.username, ref_code)
-        pay_url = create_paystack_link(user.id, user.username)
-        await update.message.reply_text(
-            f"👋 Welcome to {BOT_NAME}!\nTo activate your account, pay ₦{JOIN_FEE} below:\n{pay_url}"
-        )
+    if not user_exists:
+        cursor.execute("INSERT INTO users (user_id, username) VALUES (?, ?)", (user_id, username))
+        conn.commit()
+    
+    # Handle referral if link has start arg
+    if context.args:
+        referrer = int(context.args[0])
+        if referrer != user_id:
+            cursor.execute("UPDATE users SET referrer_id = ? WHERE user_id = ?", (referrer, user_id))
+            cursor.execute("UPDATE users SET balance = balance + 300 WHERE user_id = ?", (referrer,))
+            conn.commit()
 
-async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    bal = get_balance(update.effective_user.id)
-    await update.message.reply_text(f"💰 Your balance is ₦{bal}")
+    conn.close()
+    
+    keyboard = [[InlineKeyboardButton("💳 Pay ₦1000 to Join", callback_data="pay")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
-async def refer(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    link = f"https://t.me/{BOT_NAME}?start={user_id}"
-    count = get_ref_count(user_id)
     await update.message.reply_text(
-        f"🔗 Your referral link:\n{link}\n\n👥 Referrals: {count}"
+        "👋 Welcome to *ReferGenie!*\n\n"
+        "Pay ₦1000 to activate your account and start earning ₦300 per referral.",
+        reply_markup=reply_markup,
+        parse_mode="Markdown"
     )
+    await update.message.reply_text("👇 Use the menu below to access other features.", reply_markup=main_menu())
 
+# === INLINE BUTTON HANDLER ===
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+    username = query.from_user.username or f"user{user_id}"
+
+    payload = {
+        "email": f"{username}@gmail.com",
+        "amount": 100000,  # in kobo (₦1000)
+        "metadata": {"user_id": user_id}
+    }
+
+    headers = {
+        "Authorization": f"Bearer {PAYSTACK_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    try:
+        res = requests.post("https://api.paystack.co/transaction/initialize", headers=headers, json=payload)
+        data = res.json()
+
+        if data.get("status"):
+            payment_url = data["data"]["authorization_url"]
+            await query.message.reply_text(f"💳 Click below to pay:\n{payment_url}")
+        else:
+            await query.message.reply_text(f"❌ Error: {data.get('message', 'Failed to create payment link')}")
+    except Exception as e:
+        logging.error(f"Paystack error: {e}")
+        await query.message.reply_text("⚠️ Payment failed due to server error.")
+
+# === COMMAND: /balance or 💰 Check Balance ===
+async def show_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    conn = sqlite3.connect("refergenie.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT balance FROM users WHERE user_id=?", (user_id,))
+    balance = cursor.fetchone()
+
+    conn.close()
+
+    if balance:
+        await update.message.reply_text(f"💰 Your balance: ₦{balance[0]}")
+    else:
+        await update.message.reply_text("❌ You are not registered yet. Please try again later.")
+
+# === COMMAND: /refer or 👥 Get Referral Link ===
+async def referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
+    await update.message.reply_text(f"🔗 Your referral link:\n{link}")
+
+# === COMMAND: /withdraw or 💵 Withdraw ===
 async def withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    bal = get_balance(user_id)
-    if bal < MIN_WITHDRAW:
-        await update.message.reply_text("❌ You need at least ₦1000 to withdraw.")
-    else:
-        update_balance(user_id, -bal)
-        await update.message.reply_text("✅ Withdrawal request sent. You'll be paid soon!")
+    conn = sqlite3.connect("refergenie.db")
+    cursor = conn.cursor()
 
-async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("❓ Unknown command. Use /start /balance /refer /withdraw")
+    cursor.execute("SELECT balance FROM users WHERE user_id=?", (user_id,))
+    balance = cursor.fetchone()
+
+    if balance and balance[0] >= 1000:
+        cursor.execute("UPDATE users SET balance = balance - 1000 WHERE user_id = ?", (user_id,))
+        conn.commit()
+        await update.message.reply_text("✅ Withdrawal of ₦1000 requested. Admin will process it shortly.")
+    else:
+        await update.message.reply_text("❌ Minimum balance for withdrawal is ₦1000.")
+
+    conn.close()
+
+# === HANDLE BUTTONS (Text Messages from Keyboard) ===
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    if text == "💰 Check Balance":
+        await show_balance(update, context)
+    elif text == "👥 Get Referral Link":
+        await referral(update, context)
+    elif text == "💵 Withdraw":
+        await withdraw(update, context)
+    else:
+        await update.message.reply_text("❓ Unknown option. Please use the buttons below.", reply_markup=main_menu())
 
 # === MAIN ===
-if __name__ == "__main__":
-    init_db()
+if __name__ == '__main__':
+    init_db()  # Initialize the DB on startup
+
     app = ApplicationBuilder().token(BOT_TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("balance", balance))
-    app.add_handler(CommandHandler("refer", refer))
-    app.add_handler(CommandHandler("withdraw", withdraw))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, unknown))
+    app.add_handler(CallbackQueryHandler(button_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+
+    print("✅ ReferGenie is running...")
     app.run_polling()
