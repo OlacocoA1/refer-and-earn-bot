@@ -4,7 +4,8 @@ import random
 import string
 import requests
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext
+
 
 # Paystack API key
 PAYSTACK_SECRET_KEY = 'sk_live_9bfca73249f8e846633bd822e708ee9abfa9b1af'  # Replace with your Paystack secret key
