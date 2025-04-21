@@ -1,105 +1,174 @@
 import os
-import time
+import logging
+import random
+import string
 import requests
-import sqlite3
-from flask import Flask, request, redirect
-from threading import Thread
-from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackContext, CallbackQueryHandler
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-# === CONFIGURATION ===
-TELEGRAM_BOT_TOKEN = "7373949725:AAEh73YVcSeE2R0Cyp0Y3yuYci38dOx9-2Y"
-AMMER_API_KEY = "5775769170:LIVE:TG_GCSu3Z2A9p9yMV1Nck9B8UAA"
-BOT_USERNAME = "ReferGenieBot"
-RENDER_BASE_URL = "https://refer-and-earn-bot-6npx.onrender.com"
+# Paystack API key
+PAYSTACK_SECRET_KEY = 'sk_live_9bfca73249f8e846633bd822e708ee9abfa9b1af'  # Replace with your Paystack secret key
 
-# === INITIALIZE TELEGRAM ===
-bot = Bot(token=TELEGRAM_BOT_TOKEN)
-updater = Updater(token=TELEGRAM_BOT_TOKEN, use_context=True)
-dispatcher = updater.dispatcher
+# Telegram Bot Token
+TELEGRAM_TOKEN = '7373949725:AAEh73YVcSeE2R0Cyp0Y3yuYci38dOx9-2Y'  # Replace with your Telegram bot token
 
-# === FLASK SERVER FOR CALLBACK ===
-app = Flask(__name__)
+# In-memory storage for users (this can be replaced with a database later)
+users_data = {}
 
-# === DATABASE SETUP ===
-def init_db():
-    conn = sqlite3.connect("refergenie.db")
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            telegram_id INTEGER,
-            username TEXT,
-            paid INTEGER DEFAULT 0
-        )
-    """)
-    conn.commit()
-    conn.close()
+# Configure logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# === START HANDLER ===
-def start(update: Update, context: CallbackContext):
-    user = update.effective_user
-    telegram_id = user.id
-    username = user.username
+# Helper functions to manage users
+def generate_referral_code():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
-    # Save user to DB if not exists
-    conn = sqlite3.connect("refergenie.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE telegram_id=?", (telegram_id,))
-    if not cursor.fetchone():
-        cursor.execute("INSERT INTO users (telegram_id, username) VALUES (?, ?)", (telegram_id, username))
-    conn.commit()
-    conn.close()
+# Command: /start
+def start(update: Update, context: CallbackContext) -> None:
+    user_id = update.message.from_user.id
+    if user_id not in users_data:
+        # New user, register them
+        users_data[user_id] = {
+            'balance': 300,  # Starting balance
+            'referral_code': generate_referral_code(),
+            'referred_by': None,
+            'referrals': 0
+        }
+        update.message.reply_text(f"Welcome! You have been registered. Your starting balance is ₦300.")
+    else:
+        update.message.reply_text(f"Welcome back, your current balance is: ₦{users_data[user_id]['balance']}")
 
-    # Show Pay button
-    pay_button = InlineKeyboardButton("💳 Pay ₦1000", callback_data="pay_now")
-    reply_markup = InlineKeyboardMarkup([[pay_button]])
-    update.message.reply_text(
-        "Welcome to ReferGenie! 🎉\nClick below to make your ₦1000 payment and unlock full access.",
-        reply_markup=reply_markup
-    )
+# Command: /refer
+def refer(update: Update, context: CallbackContext) -> None:
+    user_id = update.message.from_user.id
+    referral_code = users_data[user_id]['referral_code']
+    referral_link = f"https://t.me/{context.bot.username}?start={referral_code}"
+    
+    update.message.reply_text(f"Share this link with your friends to refer them and earn rewards:\n{referral_link}")
 
-# === CALLBACK QUERY HANDLER ===
-def handle_callback(update: Update, context: CallbackContext):
-    query = update.callback_query
-    user = query.from_user
-    telegram_id = user.id
+# Command: /deposit
+def deposit(update: Update, context: CallbackContext) -> None:
+    user_id = update.message.from_user.id
+    if user_id not in users_data:
+        update.message.reply_text("You need to register first using /start.")
+        return
+    
+    # Deposit amount (you can make it dynamic if needed)
+    amount = 100  # Example amount for deposit
+    
+    # Create a Paystack payment link
+    payment_url = create_paystack_payment_link(amount)
+    
+    if payment_url:
+        update.message.reply_text(f"To deposit ₦{amount}, click the link below to proceed with your payment:\n{payment_url}")
+    else:
+        update.message.reply_text("An error occurred while creating the payment link. Please try again later.")
 
-    if query.data == "pay_now":
-        email = f"{user.username or 'refergenie'}@gmail.com"
-        payment_url = f"https://ammerpay.com/pay?amount=1000&email={email}&key={AMMER_API_KEY}&callback={RENDER_BASE_URL}/payment_callback?user_id={telegram_id}"
-        context.bot.send_message(
-            chat_id=telegram_id,
-            text=f"Click below to complete your payment:\n{payment_url}"
-        )
+# Function to create Paystack payment link
+def create_paystack_payment_link(amount: int) -> str:
+    headers = {
+        "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
+        "Content-Type": "application/json"
+    }
 
-# === PAYMENT CALLBACK ===
-@app.route("/payment_callback", methods=["GET", "POST"])
-def payment_callback():
-    telegram_id = request.args.get("user_id")
-    if telegram_id:
-        conn = sqlite3.connect("refergenie.db")
-        cursor = conn.cursor()
-        cursor.execute("UPDATE users SET paid=1 WHERE telegram_id=?", (telegram_id,))
-        conn.commit()
-        conn.close()
-        bot.send_message(chat_id=telegram_id, text="✅ Payment received! Welcome to ReferGenie Premium. 🎉")
-        return "OK", 200
-    return "User ID missing", 400
+    payload = {
+        "amount": amount * 100,  # Convert to Kobo (1 Naira = 100 Kobo)
+        "email": "user_email@example.com",  # Dynamically use user's email or Telegram ID
+        "currency": "NGN",
+        "callback_url": "https://yourwebsite.com/callback"  # Replace with your actual callback URL
+    }
+    
+    try:
+        # Make the request to Paystack to create a payment link
+        response = requests.post("https://api.paystack.co/transaction/initialize", headers=headers, json=payload)
+        response_data = response.json()
 
-# === KEEP FLASK ALIVE ON RENDER ===
-def run_flask():
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+        if response.status_code == 200 and response_data["status"] == "success":
+            payment_url = response_data["data"]["authorization_url"]
+            return payment_url
+        else:
+            return None
+    except Exception as e:
+        logger.error(f"Error creating Paystack payment link: {e}")
+        return None
 
-# === LAUNCH EVERYTHING ===
-if __name__ == "__main__":
-    init_db()
+# Command: /withdraw
+def withdraw(update: Update, context: CallbackContext) -> None:
+    user_id = update.message.from_user.id
+    if user_id not in users_data:
+        update.message.reply_text("You need to register first using /start.")
+        return
+    
+    balance = users_data[user_id]['balance']
+    
+    if balance < 500:
+        update.message.reply_text("Minimum withdrawal amount is ₦500.")
+        return
+    
+    # Process withdrawal via Paystack (mocked here, you would replace with actual withdrawal logic)
+    withdrawal_amount = 500
+    success = initiate_paystack_withdrawal(user_id, withdrawal_amount)
+    
+    if success:
+        users_data[user_id]['balance'] -= withdrawal_amount
+        update.message.reply_text(f"Your withdrawal of ₦{withdrawal_amount} has been processed. Your remaining balance is ₦{users_data[user_id]['balance']}.")
+    else:
+        update.message.reply_text("An error occurred while processing the withdrawal. Please try again later.")
 
-    # Telegram handlers
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CallbackQueryHandler(handle_callback))
+# Function to initiate Paystack withdrawal (you need a verified Paystack account for this)
+def initiate_paystack_withdrawal(user_id: int, amount: int) -> bool:
+    headers = {
+        "Authorization": f"Bearer {PAYSTACK_SECRET_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    # Placeholder for actual withdrawal logic, requires Paystack account and user verification
+    payload = {
+        "source": "balance",
+        "amount": amount * 100,  # Convert to Kobo
+        "recipient": "recipient_account_id"  # Use actual recipient account ID, which must be verified
+    }
+    
+    try:
+        # Simulate Paystack API request for withdrawal
+        response = requests.post("https://api.paystack.co/transfer", headers=headers, json=payload)
+        response_data = response.json()
+        
+        if response.status_code == 200 and response_data["status"] == "success":
+            return True
+        else:
+            return False
+    except Exception as e:
+        logger.error(f"Error initiating withdrawal via Paystack: {e}")
+        return False
 
-    # Launch Flask and Telegram Bot in parallel
-    Thread(target=run_flask).start()
+# Command: /my_balance
+def my_balance(update: Update, context: CallbackContext) -> None:
+    user_id = update.message.from_user.id
+    if user_id not in users_data:
+        update.message.reply_text("You need to register first using /start.")
+        return
+    
+    balance = users_data[user_id]['balance']
+    update.message.reply_text(f"Your current balance is: ₦{balance}")
+
+# Main function to start the bot
+def main():
+    updater = Updater(TELEGRAM_TOKEN, use_context=True)
+    
+    dp = updater.dispatcher
+    
+    # Commands
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("refer", refer))
+    dp.add_handler(CommandHandler("deposit", deposit))
+    dp.add_handler(CommandHandler("withdraw", withdraw))
+    dp.add_handler(CommandHandler("my_balance", my_balance))
+    
+    # Start the bot
     updater.start_polling()
     updater.idle()
+
+if __name__ == '__main__':
+    main()
