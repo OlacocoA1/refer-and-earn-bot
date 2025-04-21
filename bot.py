@@ -16,7 +16,7 @@ from telegram.ext import (
 TELEGRAM_TOKEN = "7373949725:AAEh73YVcSeE2R0Cyp0Y3yuYci38dOx9-2Y"
 AMMERPAY_API_KEY = "5775769170:LIVE:TG_GCSu3Z2A9p9yMV1Nck9B8UAA"
 BOT_USERNAME = "ReferGenieBot"
-SITE_URL = "https://your-render-site.onrender.com"  # Replace with actual Render URL
+SITE_URL = "https://refer-and-earn-bot-6npx.onrender.com"  # Replace with actual Render URL
 
 # === FLASK SETUP ===
 app = Flask(__name__)
