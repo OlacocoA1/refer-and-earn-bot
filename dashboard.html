@@ -1,74 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CashChop - User Dashboard</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <title>CashChop - Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Header Section -->
-    <header>
-        CASHCHOP - User Dashboard
-    </header>
+  <div class="container">
+    <h1>Welcome to CashChop Dashboard</h1>
 
-    <!-- Dashboard Section -->
-    <div id="dashboard-content">
-        <h2>Welcome, <span id="user-name">John Doe</span></h2>
-        <p>Balance: <span id="balance">1000</span> Points</p>
+    <button id="logout-btn">Logout</button>
 
-        <!-- Task List -->
-        <div class="task-list">
-            <div class="task-item" onclick="completeTask(50)">Complete Survey: 50 Points</div>
-            <div class="task-item" onclick="completeTask(30)">Watch Video: 30 Points</div>
-            <div class="task-item" onclick="completeTask(100)">Download Game: 100 Points</div>
-        </div>
+    <h2>CPX Research Surveys</h2>
+    <!-- CPX Research Iframe -->
+    <iframe src="https://cpx-research.com?yourID=userId" width="100%" height="600px" style="border:none;"></iframe>
 
-        <!-- Withdrawal Button -->
-        <button class="btn" onclick="withdraw()">Withdraw</button>
+    <h2>Top Up Your Wallet</h2>
+    <button id="paystack-btn">Pay Now</button>
 
-        <!-- Paystack Integration -->
-        <button class="btn" onclick="payWithPaystack()">Make Payment</button>
-    </div>
+    <h2>Adsterra Ads</h2>
+    <script type='text/javascript' src='//pl16213274.profitableratecpm.com/97/df/7b/97df7bff03132071f1f31973f5ddc233.js'></script>
+  </div>
 
-    <!-- External Ads: Adstera and CPX Research -->
-    <div id="adstera-ad">
-        <script type='text/javascript' src='//pl16213274.profitableratecpm.com/97/df/7b/97df7bff03132071f1f31973f5ddc233.js'></script>
-    </div>
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-    <div id="cpx-research-ad">
-        <script type="text/javascript" src="https://www.cpxresearch.com/ads.js"></script>
-    </div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCThCejvaE5K7rUwwMcQZYeuGd7rkhqhmQ",
+      authDomain: "cashchop-aa33e.firebaseapp.com",
+      projectId: "cashchop-aa33e",
+      storageBucket: "cashchop-aa33e.firebasestorage.app",
+      messagingSenderId: "977465105616",
+      appId: "1:977465105616:web:f8dcd659d244c1b5dd52d5",
+      measurementId: "G-R471K682RM"
+    };
 
-    <!-- Footer Section -->
-    <footer>
-        <p>&copy; 2024 CashChop. All Rights Reserved.</p>
-    </footer>
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
 
-    <!-- Internal JavaScript for Dashboard -->
-    <script>
-        let userBalance = 1000;
+    // Check if user is logged in
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "index.html"; // Not logged in
+      }
+    });
 
-        function completeTask(points) {
-            userBalance += points;
-            document.getElementById("balance").innerText = userBalance;
-            alert(`You earned ${points} points!`);
+    // Handle Logout
+    const logoutBtn = document.getElementById('logout-btn');
+    logoutBtn.addEventListener('click', () => {
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
+      }).catch((error) => {
+        alert('Logout Error: ' + error.message);
+      });
+    });
+
+    // Paystack Payment
+    const paystackBtn = document.getElementById('paystack-btn');
+    paystackBtn.addEventListener('click', () => {
+      var handler = PaystackPop.setup({
+        key: 'pk_live_b5fa4e730d9baa38f7ff012ad4d263d5d3459c5b',
+        email: auth.currentUser.email,
+        amount: 500 * 100, // Example amount: 500 Naira
+        currency: 'NGN',
+        callback: function(response){
+          alert('Payment complete! Reference: ' + response.reference);
+        },
+        onClose: function(){
+          alert('Transaction canceled');
         }
+      });
+      handler.openIframe();
+    });
+  </script>
 
-        function withdraw() {
-            if (userBalance >= 1000) {
-                alert("Withdrawal request submitted.");
-                userBalance = 0;
-                document.getElementById("balance").innerText = userBalance;
-            } else {
-                alert("Minimum withdrawal is 1000 points.");
-            }
-        }
-
-        function payWithPaystack() {
-            // Call Paystack payment integration (for simulation)
-            alert("Paystack Payment Integration is ready!");
-        }
-    </script>
+  <!-- Paystack JS -->
+  <script src="https://js.paystack.co/v1/inline.js"></script>
 </body>
 </html>
