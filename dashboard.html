@@ -2,31 +2,42 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>CashChop - Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - CashChop</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="container">
+
+  <!-- Header -->
+  <header>
     <h1>Welcome to CashChop Dashboard</h1>
+    <button id="logout-button">Logout</button>
+  </header>
 
-    <button id="logout-btn">Logout</button>
+  <!-- User Info -->
+  <section id="user-info">
+    <h2>Your Info</h2>
+    <p id="user-email">Email: </p>
+  </section>
 
-    <h2>CPX Research Surveys</h2>
-    <!-- CPX Research Iframe -->
-    <iframe src="https://cpx-research.com?yourID=userId" width="100%" height="600px" style="border:none;"></iframe>
-
-    <h2>Top Up Your Wallet</h2>
-    <button id="paystack-btn">Pay Now</button>
-
-    <h2>Adsterra Ads</h2>
+  <!-- Adstera Ad Integration -->
+  <div id="ad-container">
     <script type='text/javascript' src='//pl16213274.profitableratecpm.com/97/df/7b/97df7bff03132071f1f31973f5ddc233.js'></script>
   </div>
 
-  <!-- Firebase -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+  <!-- CPX Research Survey Integration -->
+  <iframe src="https://wall.cpx-research.com/index.php?app_id=27024&ext_user_id=your_user_id" width="100%" height="600px"></iframe>
 
+  <!-- Paystack Payment Button -->
+  <button id="payButton">Pay with Paystack</button>
+
+  <!-- Firebase App Initialization -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+
+  <script>
+    // Firebase Configuration
     const firebaseConfig = {
       apiKey: "AIzaSyCThCejvaE5K7rUwwMcQZYeuGd7rkhqhmQ",
       authDomain: "cashchop-aa33e.firebaseapp.com",
@@ -37,46 +48,50 @@
       measurementId: "G-R471K682RM"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth();
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
 
-    // Check if user is logged in
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = "index.html"; // Not logged in
+    // Get current user data and display email
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (user) {
+        document.getElementById("user-email").textContent = "Email: " + user.email;
+      } else {
+        window.location.href = "index.html"; // Redirect to login if not authenticated
       }
     });
 
-    // Handle Logout
-    const logoutBtn = document.getElementById('logout-btn');
-    logoutBtn.addEventListener('click', () => {
-      signOut(auth).then(() => {
-        window.location.href = "index.html";
-      }).catch((error) => {
-        alert('Logout Error: ' + error.message);
-      });
+    // Logout Functionality
+    const logoutButton = document.getElementById("logout-button");
+    logoutButton.addEventListener("click", function() {
+      firebase.auth().signOut()
+        .then(() => {
+          console.log("User logged out.");
+          window.location.href = "index.html"; // Redirect to login page
+        })
+        .catch((error) => {
+          console.error("Logout error:", error.message);
+        });
     });
 
-    // Paystack Payment
-    const paystackBtn = document.getElementById('paystack-btn');
-    paystackBtn.addEventListener('click', () => {
+    // Paystack Payment Handler
+    const payButton = document.getElementById('payButton');
+    payButton.addEventListener('click', function () {
       var handler = PaystackPop.setup({
-        key: 'pk_live_b5fa4e730d9baa38f7ff012ad4d263d5d3459c5b',
-        email: auth.currentUser.email,
-        amount: 500 * 100, // Example amount: 500 Naira
-        currency: 'NGN',
+        key: 'pk_live_b5fa4e730d9baa38f7ff012ad4d263d5d3459c5b', // your live public key
+        email: 'customer@email.com',
+        amount: 5000, // Amount in kobo
+        currency: "NGN",
         callback: function(response){
-          alert('Payment complete! Reference: ' + response.reference);
+          alert('Payment successful. Transaction ref is ' + response.reference);
         },
         onClose: function(){
-          alert('Transaction canceled');
+          alert('Payment window closed.');
         }
       });
       handler.openIframe();
     });
   </script>
 
-  <!-- Paystack JS -->
-  <script src="https://js.paystack.co/v1/inline.js"></script>
 </body>
 </html>
