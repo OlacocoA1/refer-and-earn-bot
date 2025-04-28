@@ -2,128 +2,32 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CashChop - Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CashChop - Login/Register</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-  <!-- Header -->
-  <header>
-    <h1>CashChop</h1>
-  </header>
+  <!-- Adsterra Ad Script (Still Active) -->
+  <script type='text/javascript' src='//pl16213274.profitableratecpm.com/97/df/7b/97df7bff03132071f1f31973f5ddc233.js'></script>
 
-  <!-- Login Section -->
-  <section id="login-section">
-    <h2>Login</h2>
-    <form id="login-form">
-      <input type="email" id="login-email" placeholder="Email" required><br>
-      <input type="password" id="login-password" placeholder="Password" required><br>
-      <button type="submit">Login</button>
-      <p id="login-error" class="error"></p>
+  <div class="container">
+    <h1 id="form-title">Sign Up</h1>
+
+    <form id="auth-form">
+      <input type="email" id="email" placeholder="Email" required>
+      <input type="password" id="password" placeholder="Password" required>
+      <button type="submit" id="submit-btn">Sign Up</button>
     </form>
-  </section>
 
-  <!-- Register Section -->
-  <section id="register-section">
-    <h2>Register</h2>
-    <form id="register-form">
-      <input type="email" id="register-email" placeholder="Email" required><br>
-      <input type="password" id="register-password" placeholder="Password" required><br>
-      <button type="submit">Register</button>
-      <p id="register-error" class="error"></p>
-    </form>
-  </section>
-
-  <!-- Adstera Ad Integration -->
-  <div id="ad-container">
-    <script type='text/javascript' src='//pl16213274.profitableratecpm.com/97/df/7b/97df7bff03132071f1f31973f5ddc233.js'></script>
+    <p id="toggle-text">
+      Already have an account? 
+      <a href="#" id="toggle-link">Login here</a>
+    </p>
   </div>
 
-  <!-- CPX Research Survey Integration -->
-  <iframe src="https://wall.cpx-research.com/index.php?app_id=27024&ext_user_id=your_user_id" width="100%" height="600px"></iframe>
-
-  <!-- Paystack Payment Button -->
-  <button id="payButton">Pay with Paystack</button>
-
-  <!-- Firebase App Initialization -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://js.paystack.co/v1/inline.js"></script>
-
-  <script>
-    // Firebase Configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyCThCejvaE5K7rUwwMcQZYeuGd7rkhqhmQ",
-      authDomain: "cashchop-aa33e.firebaseapp.com",
-      projectId: "cashchop-aa33e",
-      storageBucket: "cashchop-aa33e.firebasestorage.app",
-      messagingSenderId: "977465105616",
-      appId: "1:977465105616:web:f8dcd659d244c1b5dd52d5",
-      measurementId: "G-R471K682RM"
-    };
-
-    // Initialize Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-
-    // Register Form Handler
-    const registerForm = document.getElementById("register-form");
-    registerForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      const email = document.getElementById("register-email").value;
-      const password = document.getElementById("register-password").value;
-
-      // Firebase create user with email and password
-      firebase.auth().createUserWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-          console.log("User registered:", userCredential.user);
-          alert("Account Created Successfully! You can now log in.");
-          window.location.href = "index.html"; // Redirect to login page
-        })
-        .catch((error) => {
-          const errorMessage = error.message;
-          document.getElementById("register-error").textContent = errorMessage;
-        });
-    });
-
-    // Login Form Handler
-    const loginForm = document.getElementById("login-form");
-    loginForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      const email = document.getElementById("login-email").value;
-      const password = document.getElementById("login-password").value;
-
-      // Firebase login user with email and password
-      firebase.auth().signInWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-          console.log("User signed in:", userCredential.user);
-          window.location.href = "dashboard.html"; // Redirect to dashboard
-        })
-        .catch((error) => {
-          const errorMessage = error.message;
-          document.getElementById("login-error").textContent = errorMessage;
-        });
-    });
-
-    // Paystack Payment Handler
-    const payButton = document.getElementById('payButton');
-    payButton.addEventListener('click', function () {
-      var handler = PaystackPop.setup({
-        key: 'pk_live_b5fa4e730d9baa38f7ff012ad4d263d5d3459c5b', // your live public key
-        email: 'customer@email.com',
-        amount: 5000, // Amount in kobo
-        currency: "NGN",
-        callback: function(response){
-          alert('Payment successful. Transaction ref is ' + response.reference);
-        },
-        onClose: function(){
-          alert('Payment window closed.');
-        }
-      });
-      handler.openIframe();
-    });
-  </script>
+  <!-- Firebase and Main Script -->
+  <script type="module" src="scripts.js"></script>
 
 </body>
 </html>
