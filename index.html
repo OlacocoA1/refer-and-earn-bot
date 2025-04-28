@@ -1,101 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CashChop - Earn Easy Money</title>
-    <!-- Meta Tags -->
-    <meta name="description" content="Earn easy money by completing tasks and surveys with CashChop!">
-    <meta name="keywords" content="CashChop, earn money, online surveys, download games, Paystack, Adstera">
-    <meta name="author" content="CashChop">
-    <meta name="robots" content="index, follow">
-
-    <!-- External Links (Optional) -->
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <title>CashChop - Sign Up or Log In</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Header Section -->
-    <header>
-        CASHCHOP - Earn Easy Money
-    </header>
+  <div class="container">
+    <h1>Welcome to CashChop</h1>
 
-    <!-- Main Content (Login or Signup) -->
-    <div id="main-content">
-        <div class="content-box" id="login-section">
-            <h2>Login to CashChop</h2>
-            <form class="form-container">
-                <input type="email" id="email" placeholder="Enter your email" required>
-                <input type="password" id="password" placeholder="Enter your password" required>
-                <button type="button" class="btn" onclick="login()">Login</button>
-            </form>
-            <p>Don't have an account? <a href="#" onclick="showSignup()">Sign up</a></p>
-        </div>
+    <div id="auth-section">
+      <h2>Create an Account</h2>
+      <form id="signup-form">
+        <input type="email" id="signup-email" placeholder="Email" required>
+        <input type="password" id="signup-password" placeholder="Password" required>
+        <button type="submit">Sign Up</button>
+      </form>
 
-        <!-- Signup Section -->
-        <div class="content-box" id="signup-section" style="display: none;">
-            <h2>Create an Account</h2>
-            <form class="form-container">
-                <input type="text" id="name" placeholder="Enter your full name" required>
-                <input type="email" id="signup-email" placeholder="Enter your email" required>
-                <input type="password" id="signup-password" placeholder="Create a password" required>
-                <button type="button" class="btn" onclick="signup()">Sign up</button>
-            </form>
-            <p>Already have an account? <a href="#" onclick="showLogin()">Login</a></p>
-        </div>
+      <h2>Already have an Account?</h2>
+      <form id="login-form">
+        <input type="email" id="login-email" placeholder="Email" required>
+        <input type="password" id="login-password" placeholder="Password" required>
+        <button type="submit">Log In</button>
+      </form>
     </div>
 
-    <!-- Paystack Payment Integration -->
-    <div id="paystack-payment-section" style="display: none;">
-        <button type="button" class="btn" onclick="payWithPaystack()">Make Payment</button>
-    </div>
+    <!-- Ads Integration (Adsterra) -->
+    <script type='text/javascript' src='//pl16213274.profitableratecpm.com/97/df/7b/97df7bff03132071f1f31973f5ddc233.js'></script>
+  </div>
 
-    <!-- External Integrations: Adstera and CPX Research -->
-    <div id="adstera-ad">
-        <script type='text/javascript' src='//pl16213274.profitableratecpm.com/97/df/7b/97df7bff03132071f1f31973f5ddc233.js'></script>
-    </div>
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-    <div id="cpx-research-ad">
-        <script type="text/javascript" src="https://www.cpxresearch.com/ads.js"></script>
-    </div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCThCejvaE5K7rUwwMcQZYeuGd7rkhqhmQ",
+      authDomain: "cashchop-aa33e.firebaseapp.com",
+      projectId: "cashchop-aa33e",
+      storageBucket: "cashchop-aa33e.firebasestorage.app",
+      messagingSenderId: "977465105616",
+      appId: "1:977465105616:web:f8dcd659d244c1b5dd52d5",
+      measurementId: "G-R471K682RM"
+    };
 
-    <!-- Footer Section -->
-    <footer>
-        <p>&copy; 2024 CashChop. All Rights Reserved.</p>
-    </footer>
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth();
 
-    <!-- Internal JavaScript for Login/Signup/Payment -->
-    <script>
-        function login() {
-            // Simulate login
-            alert("Logged in successfully!");
-            showDashboard();
-        }
+    // Handle Signup
+    const signupForm = document.getElementById('signup-form');
+    signupForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('signup-email').value;
+      const password = document.getElementById('signup-password').value;
 
-        function signup() {
-            // Simulate signup
-            alert("Signed up successfully!");
-            showDashboard();
-        }
+      createUserWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          alert('Account created! You can now login.');
+        })
+        .catch((error) => {
+          alert('Signup Error: ' + error.message);
+        });
+    });
 
-        function showLogin() {
-            document.getElementById("signup-section").style.display = "none";
-            document.getElementById("login-section").style.display = "block";
-        }
+    // Handle Login
+    const loginForm = document.getElementById('login-form');
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
 
-        function showSignup() {
-            document.getElementById("login-section").style.display = "none";
-            document.getElementById("signup-section").style.display = "block";
-        }
-
-        function showDashboard() {
-            alert("Welcome to your Dashboard!");
-            // Redirect or show dashboard
-        }
-
-        function payWithPaystack() {
-            // Call Paystack payment integration (for simulation)
-            alert("Paystack Payment Integration is ready!");
-        }
-    </script>
+      signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          window.location.href = "dashboard.html";
+        })
+        .catch((error) => {
+          alert('Login Error: ' + error.message);
+        });
+    });
+  </script>
 </body>
 </html>
