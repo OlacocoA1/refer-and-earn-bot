@@ -3,18 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ReferGenie - Welcome</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>CashChop - Earn Easy Money</title>
+    <!-- Meta Tags -->
+    <meta name="description" content="Earn easy money by completing tasks and surveys with CashChop!">
+    <meta name="keywords" content="CashChop, earn money, online surveys, download games, Paystack, Adstera">
+    <meta name="author" content="CashChop">
+    <meta name="robots" content="index, follow">
+
+    <!-- External Links (Optional) -->
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Welcome to ReferGenie!</h1>
-        <p>Your journey starts here.</p>
-        
-        <div class="button-container">
-            <a href="{{ url_for('register') }}" class="btn">Register</a>
-            <a href="{{ url_for('home') }}" class="btn">Login</a>
+    <!-- Header Section -->
+    <header>
+        CASHCHOP - Earn Easy Money
+    </header>
+
+    <!-- Main Content (Login or Signup) -->
+    <div id="main-content">
+        <div class="content-box" id="login-section">
+            <h2>Login to CashChop</h2>
+            <form class="form-container">
+                <input type="email" id="email" placeholder="Enter your email" required>
+                <input type="password" id="password" placeholder="Enter your password" required>
+                <button type="button" class="btn" onclick="login()">Login</button>
+            </form>
+            <p>Don't have an account? <a href="#" onclick="showSignup()">Sign up</a></p>
+        </div>
+
+        <!-- Signup Section -->
+        <div class="content-box" id="signup-section" style="display: none;">
+            <h2>Create an Account</h2>
+            <form class="form-container">
+                <input type="text" id="name" placeholder="Enter your full name" required>
+                <input type="email" id="signup-email" placeholder="Enter your email" required>
+                <input type="password" id="signup-password" placeholder="Create a password" required>
+                <button type="button" class="btn" onclick="signup()">Sign up</button>
+            </form>
+            <p>Already have an account? <a href="#" onclick="showLogin()">Login</a></p>
         </div>
     </div>
+
+    <!-- Paystack Payment Integration -->
+    <div id="paystack-payment-section" style="display: none;">
+        <button type="button" class="btn" onclick="payWithPaystack()">Make Payment</button>
+    </div>
+
+    <!-- External Integrations: Adstera and CPX Research -->
+    <div id="adstera-ad">
+        <script type='text/javascript' src='//pl16213274.profitableratecpm.com/97/df/7b/97df7bff03132071f1f31973f5ddc233.js'></script>
+    </div>
+
+    <div id="cpx-research-ad">
+        <script type="text/javascript" src="https://www.cpxresearch.com/ads.js"></script>
+    </div>
+
+    <!-- Footer Section -->
+    <footer>
+        <p>&copy; 2024 CashChop. All Rights Reserved.</p>
+    </footer>
+
+    <!-- Internal JavaScript for Login/Signup/Payment -->
+    <script>
+        function login() {
+            // Simulate login
+            alert("Logged in successfully!");
+            showDashboard();
+        }
+
+        function signup() {
+            // Simulate signup
+            alert("Signed up successfully!");
+            showDashboard();
+        }
+
+        function showLogin() {
+            document.getElementById("signup-section").style.display = "none";
+            document.getElementById("login-section").style.display = "block";
+        }
+
+        function showSignup() {
+            document.getElementById("login-section").style.display = "none";
+            document.getElementById("signup-section").style.display = "block";
+        }
+
+        function showDashboard() {
+            alert("Welcome to your Dashboard!");
+            // Redirect or show dashboard
+        }
+
+        function payWithPaystack() {
+            // Call Paystack payment integration (for simulation)
+            alert("Paystack Payment Integration is ready!");
+        }
+    </script>
 </body>
 </html>

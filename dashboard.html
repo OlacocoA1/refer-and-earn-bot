@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CashChop - User Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header Section -->
+    <header>
+        CASHCHOP - User Dashboard
+    </header>
+
+    <!-- Dashboard Section -->
+    <div id="dashboard-content">
+        <h2>Welcome, <span id="user-name">John Doe</span></h2>
+        <p>Balance: <span id="balance">1000</span> Points</p>
+
+        <!-- Task List -->
+        <div class="task-list">
+            <div class="task-item" onclick="completeTask(50)">Complete Survey: 50 Points</div>
+            <div class="task-item" onclick="completeTask(30)">Watch Video: 30 Points</div>
+            <div class="task-item" onclick="completeTask(100)">Download Game: 100 Points</div>
+        </div>
+
+        <!-- Withdrawal Button -->
+        <button class="btn" onclick="withdraw()">Withdraw</button>
+
+        <!-- Paystack Integration -->
+        <button class="btn" onclick="payWithPaystack()">Make Payment</button>
+    </div>
+
+    <!-- External Ads: Adstera and CPX Research -->
+    <div id="adstera-ad">
+        <script type='text/javascript' src='//pl16213274.profitableratecpm.com/97/df/7b/97df7bff03132071f1f31973f5ddc233.js'></script>
+    </div>
+
+    <div id="cpx-research-ad">
+        <script type="text/javascript" src="https://www.cpxresearch.com/ads.js"></script>
+    </div>
+
+    <!-- Footer Section -->
+    <footer>
+        <p>&copy; 2024 CashChop. All Rights Reserved.</p>
+    </footer>
+
+    <!-- Internal JavaScript for Dashboard -->
+    <script>
+        let userBalance = 1000;
+
+        function completeTask(points) {
+            userBalance += points;
+            document.getElementById("balance").innerText = userBalance;
+            alert(`You earned ${points} points!`);
+        }
+
+        function withdraw() {
+            if (userBalance >= 1000) {
+                alert("Withdrawal request submitted.");
+                userBalance = 0;
+                document.getElementById("balance").innerText = userBalance;
+            } else {
+                alert("Minimum withdrawal is 1000 points.");
+            }
+        }
+
+        function payWithPaystack() {
+            // Call Paystack payment integration (for simulation)
+            alert("Paystack Payment Integration is ready!");
+        }
+    </script>
+</body>
+</html>
