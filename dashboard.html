@@ -2,96 +2,62 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard - CashChop</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CashChop Dashboard</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
   <!-- Header -->
-  <header>
-    <h1>Welcome to CashChop Dashboard</h1>
-    <button id="logout-button">Logout</button>
+  <header class="dashboard-header">
+    <h1>CashChop Dashboard</h1>
   </header>
 
-  <!-- User Info -->
-  <section id="user-info">
-    <h2>Your Info</h2>
-    <p id="user-email">Email: </p>
-  </section>
+  <!-- Main Dashboard -->
+  <main class="dashboard-main">
+    <div class="user-info-card">
+      <h2>Welcome!</h2>
+      <p id="user-email">Email: Loading...</p>
+      <p id="user-balance">Balance: 0 Points</p>
+    </div>
 
-  <!-- Adstera Ad Integration -->
-  <div id="ad-container">
-    <script type='text/javascript' src='//pl16213274.profitableratecpm.com/97/df/7b/97df7bff03132071f1f31973f5ddc233.js'></script>
-  </div>
+    <div class="dashboard-buttons">
+      <button id="tasks-button">Tasks</button>
+      <button id="refer-button">Refer & Earn</button>
+      <button id="withdraw-button">Withdraw</button>
+    </div>
 
-  <!-- CPX Research Survey Integration -->
-  <iframe src="https://wall.cpx-research.com/index.php?app_id=27024&ext_user_id=your_user_id" width="100%" height="600px"></iframe>
+    <!-- Tasks Section (Initially Hidden) -->
+    <section id="tasks-section" class="hidden">
+      <iframe src="https://wall.cpx-research.com/index.php?app_id=27024&ext_user_id=your_user_id" width="100%" height="600px"></iframe>
+    </section>
 
-  <!-- Paystack Payment Button -->
-  <button id="payButton">Pay with Paystack</button>
+    <!-- Referral Section (Initially Hidden) -->
+    <section id="refer-section" class="hidden">
+      <h2>Your Referral Code:</h2>
+      <p id="referral-code">Loading...</p>
+      <p>Share your code and earn 10% of your friends' earnings!</p>
+    </section>
 
-  <!-- Firebase App Initialization -->
+    <!-- Withdrawal Section (Initially Hidden) -->
+    <section id="withdraw-section" class="hidden">
+      <h2>Withdraw Your Earnings</h2>
+      <p>Minimum withdrawal: 10,000 points (₦1,000)</p>
+      <button id="payButton">Withdraw Now</button>
+    </section>
+  </main>
+
+  <!-- Logout Button at the Bottom -->
+  <footer>
+    <button id="logout-button">Logout</button>
+  </footer>
+
+  <!-- Firebase & Paystack Scripts -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <script src="https://js.paystack.co/v1/inline.js"></script>
-
-  <script>
-    // Firebase Configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyCThCejvaE5K7rUwwMcQZYeuGd7rkhqhmQ",
-      authDomain: "cashchop-aa33e.firebaseapp.com",
-      projectId: "cashchop-aa33e",
-      storageBucket: "cashchop-aa33e.firebasestorage.app",
-      messagingSenderId: "977465105616",
-      appId: "1:977465105616:web:f8dcd659d244c1b5dd52d5",
-      measurementId: "G-R471K682RM"
-    };
-
-    // Initialize Firebase
-    const app = firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-
-    // Get current user data and display email
-    firebase.auth().onAuthStateChanged(function(user) {
-      if (user) {
-        document.getElementById("user-email").textContent = "Email: " + user.email;
-      } else {
-        window.location.href = "index.html"; // Redirect to login if not authenticated
-      }
-    });
-
-    // Logout Functionality
-    const logoutButton = document.getElementById("logout-button");
-    logoutButton.addEventListener("click", function() {
-      firebase.auth().signOut()
-        .then(() => {
-          console.log("User logged out.");
-          window.location.href = "index.html"; // Redirect to login page
-        })
-        .catch((error) => {
-          console.error("Logout error:", error.message);
-        });
-    });
-
-    // Paystack Payment Handler
-    const payButton = document.getElementById('payButton');
-    payButton.addEventListener('click', function () {
-      var handler = PaystackPop.setup({
-        key: 'pk_live_b5fa4e730d9baa38f7ff012ad4d263d5d3459c5b', // your live public key
-        email: 'customer@email.com',
-        amount: 5000, // Amount in kobo
-        currency: "NGN",
-        callback: function(response){
-          alert('Payment successful. Transaction ref is ' + response.reference);
-        },
-        onClose: function(){
-          alert('Payment window closed.');
-        }
-      });
-      handler.openIframe();
-    });
-  </script>
-
+  <script src="scripts.js"></script> <!-- Connect to your updated scripts.js -->
+  
 </body>
 </html>
