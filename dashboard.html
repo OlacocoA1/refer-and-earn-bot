@@ -1,63 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CashChop Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-
-  <!-- Header -->
-  <header class="dashboard-header">
+  <header>
     <h1>CashChop Dashboard</h1>
+    <button id="logout-button">Logout</button>
   </header>
 
-  <!-- Main Dashboard -->
-  <main class="dashboard-main">
-    <div class="user-info-card">
-      <h2>Welcome!</h2>
-      <p id="user-email">Email: Loading...</p>
-      <p id="user-balance">Balance: 0 Points</p>
-    </div>
+  <div id="user-info" class="auth-container">
+    <p id="user-points">Your Points: Loading...</p>
+  </div>
 
-    <div class="dashboard-buttons">
+  <div class="auth-container">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
       <button id="tasks-button">Tasks</button>
       <button id="refer-button">Refer & Earn</button>
       <button id="withdraw-button">Withdraw</button>
     </div>
 
-    <!-- Tasks Section (Initially Hidden) -->
-    <section id="tasks-section" class="hidden">
-      <iframe src="https://wall.cpx-research.com/index.php?app_id=27024&ext_user_id=your_user_id" width="100%" height="600px"></iframe>
-    </section>
+    <!-- TASKS SECTION -->
+    <div id="tasks-section">
+      <h2>Complete Offers</h2>
+      <iframe src="https://cpx-research.com/?app_id=4651&ext_user_id=user123" width="100%" height="500px"></iframe>
+    </div>
 
-    <!-- Referral Section (Initially Hidden) -->
-    <section id="refer-section" class="hidden">
-      <h2>Your Referral Code:</h2>
-      <p id="referral-code">Loading...</p>
-      <p>Share your code and earn 10% of your friends' earnings!</p>
-    </section>
+    <!-- REFER SECTION -->
+    <div id="refer-section" style="display: none;">
+      <h2>Refer & Earn</h2>
+      <p>Share your referral link to earn ₦100 (1000 points) per signup:</p>
+      <input type="text" id="referral-link" readonly value="https://yourwebsite.com/register.html?ref=XXXXXX"/>
+      <button onclick="navigator.clipboard.writeText(document.getElementById('referral-link').value)">Copy Link</button>
+    </div>
 
-    <!-- Withdrawal Section (Initially Hidden) -->
-    <section id="withdraw-section" class="hidden">
-      <h2>Withdraw Your Earnings</h2>
-      <p>Minimum withdrawal: 10,000 points (₦1,000)</p>
-      <button id="payButton">Withdraw Now</button>
-    </section>
-  </main>
+    <!-- WITHDRAW SECTION -->
+    <div id="withdraw-section" style="display: none;">
+      <h2>Withdraw</h2>
+      <p>You need at least 10,000 points (₦1,000) to withdraw.</p>
+      <button id="withdraw-button">Withdraw Now</button>
+    </div>
+  </div>
 
-  <!-- Logout Button at the Bottom -->
-  <footer>
-    <button id="logout-button">Logout</button>
-  </footer>
+  <!-- ADS (SAME AS index.html) -->
+  <div id="ad-container">
+    <iframe src="https://ads.pubscale.com/?pubid=pub-969308829322" width="100%" height="300"></iframe>
+  </div>
 
-  <!-- Firebase & Paystack Scripts -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  <script src="https://js.paystack.co/v1/inline.js"></script>
-  <script src="script.js"></script> <!-- Connect to your updated script.js -->
-  
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@2.6.4/dist/email.min.js"></script>
+  <script>
+    (function(){
+      emailjs.init("your_public_key"); // Replace this
+    })();
+  </script>
+  <script src="script.js"></script>
 </body>
 </html>
